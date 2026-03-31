@@ -6,9 +6,8 @@ export const aiService = {
     const enhancedPrompt = `${prompt}, high-end architectural interior, luxury furniture, photorealistic, 8k, soft shadows`;
     const encodedPrompt = encodeURIComponent(enhancedPrompt);
     
-    // API Route Over WiFi/AdBlocker Proxies (AllOrigins CORS Bypass)
-    const targetUrl = `https://image.pollinations.ai/prompt/${encodedPrompt}?width=1280&height=720&nologo=true`;
-    const dynamicImageUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(targetUrl)}`;
+    // Serverless Edge Proxy Route (Bypasses ANY AdBlocker/Client Firewall completely)
+    const dynamicImageUrl = `/api/generate/${encodedPrompt}?width=1280&height=720&nologo=true`;
 
     return {
       score: 0.96, // Score alto para motivar a Ariana

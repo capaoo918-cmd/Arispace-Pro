@@ -1,0 +1,8 @@
+{
+  "rewrites": [
+    {
+      "source": "/api/generate/:prompt*",
+      "destination": "https://image.pollinations.ai/prompt/:prompt*"
+    }
+  ]
+}
