@@ -1,0 +1,131 @@
+@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@200;300;400;500;600;700;800&family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Manrope", "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-headline: "Manrope", sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+
+  --color-primary: #8B5CF6;
+  --color-primary-light: #C4B5FD;
+  --color-accent: #10B981;
+  --color-surface: #F9FAFB;
+  --color-text: #1F2937;
+  --color-surface-container-high: #e4e9ea;
+  --color-on-secondary: #fdf7ff;
+  --color-outline-variant: #adb3b4;
+  --color-error-container: #fe8b70;
+  --color-on-background: #2d3435;
+  --color-on-secondary-fixed-variant: #5f5775;
+  --color-inverse-primary: #dff8d2;
+  --color-on-tertiary-container: #5a5b62;
+  --color-on-error-container: #742410;
+  --color-on-primary-container: #42573b;
+  --color-outline: #757c7d;
+  --color-secondary-fixed-dim: #dacff3;
+  --color-surface-container: #ebeeef;
+  --color-on-tertiary: #f9f8ff;
+  --color-on-surface: #2d3435;
+  --color-tertiary-dim: #525359;
+  --color-primary-fixed: #d1eac5;
+  --color-on-primary-fixed-variant: #4c6144;
+  --color-on-secondary-container: #554d6b;
+  --color-tertiary: #5e5f65;
+  --color-on-primary: #e7ffda;
+  --color-surface-variant: #dde4e5;
+  --color-surface-dim: #d3dbdd;
+  --color-secondary-fixed: #e8ddff;
+  --color-tertiary-fixed: #f4f3fb;
+  --color-on-tertiary-fixed: #484950;
+  --color-inverse-surface: #0c0f0f;
+  --color-on-secondary-fixed: #423b57;
+  --color-on-primary-fixed: #30452a;
+  --color-on-error: #fff7f6;
+  --color-tertiary-fixed-dim: #e5e4ec;
+  --color-surface-container-highest: #dde4e5;
+  --color-primary-fixed-dim: #c3dcb7;
+  --color-error-dim: #5c1202;
+  --color-background: #f9f9f9;
+  --color-surface-container-low: #f2f4f4;
+  --color-secondary: #625b79;
+  --color-secondary-dim: #564f6c;
+  --color-on-tertiary-fixed-variant: #65666c;
+  --color-tertiary-container: #f4f3fb;
+  --color-inverse-on-surface: #9c9d9d;
+  --color-surface-bright: #f9f9f9;
+  --color-surface-tint: #4f6447;
+  --color-primary-dim: #43583c;
+  --color-secondary-container: #e8ddff;
+  --color-on-surface-variant: #5a6061;
+  --color-error: #9e422c;
+  --color-primary-container: #d1eac5;
+  --color-surface-container-lowest: #ffffff;
+}
+
+@layer base {
+  body {
+    @apply bg-surface text-text font-sans antialiased;
+    min-height: 100vh;
+  }
+}
+
+.glass-panel {
+  @apply bg-white/40 backdrop-blur-2xl border border-white/40;
+}
+
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+.shadow-luxury {
+  box-shadow: 0 24px 48px -12px rgba(45, 52, 53, 0.08);
+}
+
+.bg-lava-lamp {
+  background: linear-gradient(-45deg, var(--color-primary), var(--color-primary-light), var(--color-surface), transparent);
+  background-size: 400% 400%;
+  animation: lavaLamp 15s ease infinite alternate;
+}
+
+@keyframes lavaLamp {
+  0% {
+    background-position: 0% 50%;
+  }
+  100% {
+    background-position: 100% 50%;
+  }
+}
+
+/* Fluid Lava Lamp Orbs Keyframes */
+@keyframes orbMove1 {
+  0% { transform: translate(0, 0) scale(1) rotate(0deg); }
+  33% { transform: translate(15vw, -10vh) scale(1.1) rotate(60deg); }
+  66% { transform: translate(-10vw, 15vh) scale(0.9) rotate(120deg); }
+  100% { transform: translate(0, 0) scale(1) rotate(360deg); }
+}
+
+@keyframes orbMove2 {
+  0% { transform: translate(0, 0) scale(1) rotate(0deg); }
+  33% { transform: translate(-15vw, 15vh) scale(0.9) rotate(-60deg); }
+  66% { transform: translate(10vw, -10vh) scale(1.1) rotate(-120deg); }
+  100% { transform: translate(0, 0) scale(1) rotate(-360deg); }
+}
+
+@keyframes orbMove3 {
+  0% { transform: translate(0, 0) scale(0.8) rotate(0deg); }
+  33% { transform: translate(10vw, 15vh) scale(1.2) rotate(45deg); }
+  66% { transform: translate(-15vw, -5vh) scale(0.9) rotate(90deg); }
+  100% { transform: translate(0, 0) scale(0.8) rotate(360deg); }
+}
+
+@keyframes orbMove4 {
+  0% { transform: translate(0, 0) scale(1.1) rotate(0deg); }
+  33% { transform: translate(-20vw, -15vh) scale(0.8) rotate(-45deg); }
+  66% { transform: translate(5vw, 15vh) scale(1.05) rotate(-90deg); }
+  100% { transform: translate(0, 0) scale(1.1) rotate(-360deg); }
+}
+
+.animate-orb-1 { animation: orbMove1 28s infinite ease-in-out; }
+.animate-orb-2 { animation: orbMove2 34s infinite ease-in-out; }
+.animate-orb-3 { animation: orbMove3 40s infinite ease-in-out; }
+.animate-orb-4 { animation: orbMove4 22s infinite ease-in-out; }

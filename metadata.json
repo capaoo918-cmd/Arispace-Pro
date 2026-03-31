@@ -1,0 +1,8 @@
+{
+  "name": "Arispace | Architectural OS",
+  "description": "A high-fidelity architectural design and analysis platform for forging clarity from AI-driven ideation.",
+  "requestFramePermissions": [
+    "camera",
+    "microphone"
+  ]
+}
