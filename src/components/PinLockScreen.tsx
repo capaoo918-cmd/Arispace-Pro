@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { motion, AnimatePresence } from 'motion/react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { ShieldCheck } from 'lucide-react';
 
 interface PinLockScreenProps {
@@ -98,7 +98,7 @@ export const PinLockScreen: React.FC<PinLockScreenProps> = ({ onUnlock }) => {
           {pin.map((digit, i) => (
             <input
               key={i}
-              ref={el => inputRefs.current[i] = el}
+              ref={el => { inputRefs.current[i] = el; }}
               type="password"
               inputMode="numeric"
               maxLength={1}

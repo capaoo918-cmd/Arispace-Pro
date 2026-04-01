@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { WelcomeHeader } from './WelcomeHeader';
 import { ShieldCheck, Lock, Unlock, KeyRound, CheckCircle } from 'lucide-react';
-import { motion, AnimatePresence } from 'motion/react';
+import { motion, AnimatePresence } from 'framer-motion';
 
 export const SettingsView: React.FC = () => {
   const [hasPin, setHasPin] = useState(false);

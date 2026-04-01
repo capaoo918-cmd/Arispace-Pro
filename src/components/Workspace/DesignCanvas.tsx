@@ -39,6 +39,14 @@ const CanvasItem = React.memo<CanvasItemProps>(
 
     const sizeRef = useRef(localSize);
     const rotRef = useRef(localRot);
+    const activeControllerRef = useRef<AbortController | null>(null);
+
+    // BLINDAJE: Limpieza de listeners activos si el panel se desmonta durante un arrastre
+    useEffect(() => {
+      return () => {
+        activeControllerRef.current?.abort();
+      };
+    }, []);
 
     useEffect(() => {
       sizeRef.current = localSize;
@@ -71,6 +79,7 @@ const CanvasItem = React.memo<CanvasItemProps>(
 
       // AbortController limpia ambos listeners automáticamente
       const controller = new AbortController();
+      activeControllerRef.current = controller;
       const { signal } = controller;
 
       const onPointerMove = (moveEvent: PointerEvent) => {

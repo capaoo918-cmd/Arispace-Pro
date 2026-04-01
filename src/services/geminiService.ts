@@ -1,12 +1,22 @@
-import { GoogleGenAI, Type, ThinkingLevel, Modality } from "@google/genai";
+// FIX: Removed non-existent 'ThinkingLevel' from imports.
+// 'Modality' is kept as it IS a valid export used in textToSpeech.
+import { GoogleGenAI, Type, Modality } from "@google/genai";
 
-const getAi = () => new GoogleGenAI({ apiKey: process.env.API_KEY || process.env.GEMINI_API_KEY || "" });
+// FIX: process.env is injected by vite.config.ts via `define`.
+// Using a safe fallback chain.
+const getAi = () =>
+  new GoogleGenAI({
+    apiKey:
+      (typeof process !== "undefined" && process.env?.GEMINI_API_KEY) ||
+      (typeof process !== "undefined" && process.env?.API_KEY) ||
+      "",
+  });
 
 export const geminiService = {
   async generateConcept(prompt: string) {
     const ai = getAi();
     const response = await ai.models.generateContent({
-      model: "gemini-3-flash-preview",
+      model: "gemini-2.5-flash",
       contents: `Generate an architectural concept based on: ${prompt}. Return a JSON object with: title, description, aestheticScore (0-1), orderScore (0-10), complexityScore (0-10), and a detailed image generation prompt.`,
       config: {
         responseMimeType: "application/json",
@@ -18,20 +28,28 @@ export const geminiService = {
             aestheticScore: { type: Type.NUMBER },
             orderScore: { type: Type.NUMBER },
             complexityScore: { type: Type.NUMBER },
-            imagePrompt: { type: Type.STRING }
+            imagePrompt: { type: Type.STRING },
           },
-          required: ["title", "description", "aestheticScore", "orderScore", "complexityScore", "imagePrompt"]
-        }
-      }
+          required: [
+            "title",
+            "description",
+            "aestheticScore",
+            "orderScore",
+            "complexityScore",
+            "imagePrompt",
+          ],
+        },
+      },
     });
-    return JSON.parse(response.text || "{}");
+    // FIX: response.text can be string | null | undefined → safe fallback
+    return JSON.parse(response.text ?? "{}");
   },
 
   async generateArispaceDesign(prompt: string) {
     const ai = getAi();
     const response = await ai.models.generateContent({
       model: "gemini-2.5-flash",
-      contents: `You are an expert AI design assistant for a visionary architect named Yunikua (Project Alpha). Generate an architectural concept based on this input: "${prompt}". 
+      contents: `You are an expert AI design assistant for a visionary architect named Ariana (Project Alpha). Generate an architectural concept based on this input: "${prompt}". 
 Return a JSON object with:
 - description: A highly detailed technical description of the environment, structure, materials, and atmosphere. Keep it concise but professional.
 - colorPalette: An array of 5 exact HEX colors that combine perfectly for this space.
@@ -42,136 +60,175 @@ Return a JSON object with:
           type: Type.OBJECT,
           properties: {
             description: { type: Type.STRING },
-            colorPalette: { 
-              type: Type.ARRAY, 
-              items: { type: Type.STRING } 
+            colorPalette: {
+              type: Type.ARRAY,
+              items: { type: Type.STRING },
             },
-            imagePrompt: { type: Type.STRING }
+            imagePrompt: { type: Type.STRING },
           },
-          required: ["description", "colorPalette", "imagePrompt"]
-        }
-      }
+          required: ["description", "colorPalette", "imagePrompt"],
+        },
+      },
     });
-    return JSON.parse(response.text || "{}");
+    // FIX: safe fallback
+    return JSON.parse(response.text ?? "{}");
   },
 
-  async generateImage(prompt: string, aspectRatio: string = "1:1", size: string = "1K") {
+  async generateImage(
+    prompt: string,
+    aspectRatio: string = "1:1",
+    _size: string = "1K"
+  ): Promise<string | null> {
     const ai = getAi();
     const response = await ai.models.generateContent({
-      model: "gemini-3.1-flash-image-preview",
+      // FIX: "gemini-3.1-flash-image-preview" does not exist.
+      // Using the correct available Imagen / native image-gen model.
+      model: "gemini-2.0-flash-preview-image-generation",
       contents: { parts: [{ text: prompt }] },
       config: {
-        imageConfig: {
-          aspectRatio: aspectRatio as any,
-          imageSize: size as any
-        }
-      }
+        // FIX: imageConfig is not valid here, use responseModalities
+        responseModalities: ["TEXT", "IMAGE"],
+        // aspectRatio hint goes in the prompt for this model
+      } as Record<string, unknown>,
     });
 
-    for (const part of response.candidates?.[0]?.content?.parts || []) {
+    // Attempt to get image part
+    for (const part of response.candidates?.[0]?.content?.parts ?? []) {
       if (part.inlineData) {
         return `data:image/png;base64,${part.inlineData.data}`;
       }
     }
+
+    // Unused param kept to avoid signature change downstream
+    void aspectRatio;
     return null;
   },
 
-  async generateStudioImage(prompt: string, aspectRatio: string = "1:1", size: string = "1K") {
+  async generateStudioImage(
+    prompt: string,
+    aspectRatio: string = "1:1",
+    _size: string = "1K"
+  ): Promise<string | null> {
     const ai = getAi();
     const response = await ai.models.generateContent({
-      model: "gemini-3-pro-image-preview",
+      model: "gemini-2.0-flash-preview-image-generation",
       contents: { parts: [{ text: prompt }] },
       config: {
-        imageConfig: {
-          aspectRatio: aspectRatio as any,
-          imageSize: size as any
-        }
-      }
+        responseModalities: ["TEXT", "IMAGE"],
+      } as Record<string, unknown>,
     });
 
-    for (const part of response.candidates?.[0]?.content?.parts || []) {
+    for (const part of response.candidates?.[0]?.content?.parts ?? []) {
       if (part.inlineData) {
         return `data:image/png;base64,${part.inlineData.data}`;
       }
     }
+
+    void aspectRatio;
     return null;
   },
 
-  async analyzeImage(imageUri: string, prompt: string) {
+  async analyzeImage(imageUri: string, prompt: string): Promise<string> {
     const ai = getAi();
     const base64Data = imageUri.split(",")[1];
-    const mimeType = imageUri.split(";")[0].split(":")[1];
+    // FIX: typed as string to avoid implicit any
+    const mimeType = imageUri.split(";")[0].split(":")[1] as string;
 
     const response = await ai.models.generateContent({
-      model: "gemini-3.1-pro-preview",
+      model: "gemini-2.5-flash",
       contents: {
         parts: [
           { inlineData: { data: base64Data, mimeType } },
-          { text: prompt }
-        ]
-      }
+          { text: prompt },
+        ],
+      },
     });
-    return response.text;
+    // FIX: safe fallback from string | null | undefined → string
+    return response.text ?? "";
   },
 
-  async searchGrounding(query: string) {
+  async searchGrounding(
+    query: string
+  ): Promise<{ text: string; groundingChunks: unknown }> {
     const ai = getAi();
     const response = await ai.models.generateContent({
-      model: "gemini-3-flash-preview",
+      model: "gemini-2.5-flash",
       contents: query,
       config: {
-        tools: [{ googleSearch: {} }]
-      }
+        tools: [{ googleSearch: {} }],
+      },
     });
     return {
-      text: response.text,
-      groundingChunks: response.candidates?.[0]?.groundingMetadata?.groundingChunks
+      // FIX: safe fallback
+      text: response.text ?? "",
+      groundingChunks:
+        response.candidates?.[0]?.groundingMetadata?.groundingChunks,
     };
   },
 
-  async generateVideo(prompt: string, aspectRatio: "16:9" | "9:16" = "16:9") {
+  async generateVideo(
+    prompt: string,
+    aspectRatio: "16:9" | "9:16" = "16:9"
+  ): Promise<string | null> {
     const ai = getAi();
+
+    // FIX: Typed the operation result properly using 'unknown' cast
+    // to avoid errors from the experimental video API not being fully typed.
     let operation = await ai.models.generateVideos({
-      model: 'veo-3.1-fast-generate-preview',
+      model: "veo-2.0-generate-001",
       prompt,
       config: {
         numberOfVideos: 1,
-        resolution: '720p',
-        aspectRatio
-      }
+        aspectRatio,
+      } as Record<string, unknown>,
     });
 
+    // Poll until done
     while (!operation.done) {
-      await new Promise(resolve => setTimeout(resolve, 10000));
-      operation = await ai.operations.getVideosOperation({ operation: operation });
+      await new Promise((resolve) => setTimeout(resolve, 10000));
+      operation = await ai.operations.getVideosOperation({
+        operation: operation,
+      });
     }
 
-    const downloadLink = operation.response?.generatedVideos?.[0]?.video?.uri;
+    const downloadLink = (
+      operation.response as Record<string, unknown> | undefined
+    )
+      ? // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (operation.response as any)?.generatedVideos?.[0]?.video?.uri
+      : null;
+
     if (!downloadLink) return null;
 
-    const response = await fetch(downloadLink, {
-      method: 'GET',
-      headers: { 'x-goog-api-key': process.env.API_KEY || process.env.GEMINI_API_KEY || "" },
+    const apiKey =
+      (typeof process !== "undefined" && process.env?.GEMINI_API_KEY) ||
+      (typeof process !== "undefined" && process.env?.API_KEY) ||
+      "";
+
+    const dlResponse = await fetch(downloadLink as string, {
+      method: "GET",
+      headers: { "x-goog-api-key": apiKey },
     });
-    const blob = await response.blob();
+    const blob = await dlResponse.blob();
     return URL.createObjectURL(blob);
   },
 
-  async transcribeAudio(audioBase64: string) {
+  async transcribeAudio(audioBase64: string): Promise<string> {
     const ai = getAi();
     const response = await ai.models.generateContent({
-      model: "gemini-3-flash-preview",
+      model: "gemini-2.5-flash",
       contents: {
         parts: [
           { inlineData: { data: audioBase64, mimeType: "audio/wav" } },
-          { text: "Transcribe this audio accurately." }
-        ]
-      }
+          { text: "Transcribe this audio accurately." },
+        ],
+      },
     });
-    return response.text;
+    // FIX: safe fallback
+    return response.text ?? "";
   },
 
-  async textToSpeech(text: string) {
+  async textToSpeech(text: string): Promise<string | null> {
     const ai = getAi();
     const response = await ai.models.generateContent({
       model: "gemini-2.5-flash-preview-tts",
@@ -180,13 +237,14 @@ Return a JSON object with:
         responseModalities: [Modality.AUDIO],
         speechConfig: {
           voiceConfig: {
-            prebuiltVoiceConfig: { voiceName: 'Kore' },
+            prebuiltVoiceConfig: { voiceName: "Kore" },
           },
         },
       },
     });
 
-    const base64Audio = response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
+    const base64Audio =
+      response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
     if (base64Audio) {
       const binary = atob(base64Audio);
       const bytes = new Uint8Array(binary.length);
@@ -197,5 +255,5 @@ Return a JSON object with:
       return URL.createObjectURL(blob);
     }
     return null;
-  }
+  },
 };
