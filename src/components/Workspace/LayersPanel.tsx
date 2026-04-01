@@ -5,11 +5,9 @@ import { toPng } from 'html-to-image';
 import { ResultModal } from './ResultModal';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
-  ChevronDown, 
   Trash2, 
   Layers, 
   Zap, 
-  ShieldCheck,
   Loader2,
   Maximize,
   History,
