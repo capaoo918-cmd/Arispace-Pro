@@ -17,6 +17,14 @@ export interface SavedThought {
   timestamp: string;
 }
 
+export interface AgendaTask {
+  id: string;
+  title: string;
+  deadline: string; // ISO String or formatted string
+  time: string; // "14:00"
+  completed: boolean;
+}
+
 export interface MaterialFolder {
   id: string;
   name: string;
@@ -86,6 +94,20 @@ interface ArispaceState {
   deleteThought: (id: string) => void;
   addMaterialFolder: (name: string) => void;
   saveMaterialMeta: (id: string, name: string, category: string, folderId?: string) => void;
+  addSavedMaterial: (material: Omit<SavedMaterial, 'id'>) => void;
+  
+  agendaTasks: AgendaTask[];
+  addAgendaTask: (task: Omit<AgendaTask, 'id' | 'completed'>) => void;
+  toggleAgendaTask: (id: string) => void;
+  deleteAgendaTask: (id: string) => void;
+
+  // Privacy Engine & Appearance
+  isLocked: boolean;
+  setIsLocked: (lock: boolean) => void;
+  isDarkMode: boolean;
+  toggleDarkMode: () => void;
+  autoLockTime: number; // in minutes
+  setAutoLockTime: (minutes: number) => void;
 }
 
 export const useArispaceStore = create<ArispaceState>()(
@@ -113,6 +135,10 @@ export const useArispaceStore = create<ArispaceState>()(
   isHDMode: true,
   savedThoughts: [],
   materialFolders: [],
+  agendaTasks: [],
+  isLocked: true,
+  isDarkMode: false,
+  autoLockTime: 0,
 
   toggleInspectorMode: () => set((state) => ({ isInspectorMode: !state.isInspectorMode })),
   setBackgroundImage: (url) => set({ backgroundImage: url }),
@@ -286,6 +312,29 @@ export const useArispaceStore = create<ArispaceState>()(
       m.id === id ? { ...m, name, category, folderId } : m
     )
   })),
+
+  addSavedMaterial: (material) => set((state) => ({
+    savedMaterials: [
+      ...state.savedMaterials,
+      { id: 'mat-' + Math.random().toString(36).substr(2, 9), ...material }
+    ]
+  })),
+
+  addAgendaTask: (task) => set((state) => ({
+    agendaTasks: [...state.agendaTasks, { id: 'task-' + Date.now(), completed: false, ...task }]
+  })),
+
+  toggleAgendaTask: (id) => set((state) => ({
+    agendaTasks: state.agendaTasks.map(t => t.id === id ? { ...t, completed: !t.completed } : t)
+  })),
+
+  deleteAgendaTask: (id) => set((state) => ({
+    agendaTasks: state.agendaTasks.filter(t => t.id !== id)
+  })),
+
+  setIsLocked: (lock) => set({ isLocked: lock }),
+  toggleDarkMode: () => set((state) => ({ isDarkMode: !state.isDarkMode })),
+  setAutoLockTime: (minutes) => set({ autoLockTime: minutes }),
 
 }),
 {

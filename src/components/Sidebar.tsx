@@ -1,5 +1,6 @@
 import React from 'react';
 import { Sparkles, Layers, Image as ImageIcon, Plus, FileText, Settings } from 'lucide-react';
+import { useArispaceStore } from '../store/useArispaceStore';
 
 const navItems = [
   { name: 'Icebreaker', icon: Sparkles, href: '#icebreaker' },
@@ -10,12 +11,18 @@ const navItems = [
 ];
 
 export const Sidebar: React.FC = () => {
+  const { setIsLocked } = useArispaceStore();
+
   return (
     <aside className="w-[250px] h-screen bg-gradient-to-b from-[#6D28D9] via-[#E9D5FF] to-[#FFFFFF] flex flex-col justify-between p-6 shadow-luxury fixed left-0 top-0 z-50 border-r border-[#6D28D9]/10">
       <div className="flex flex-col gap-8">
         {/* Logo with Premium Glow */}
         <div className="py-4">
-          <h1 className="text-3xl font-black tracking-tighter text-[#1F2937] drop-shadow-[0_0_15px_rgba(109,40,217,0.4)] font-sans hover:scale-105 transition-transform cursor-default">
+          <h1 
+             onClick={() => setIsLocked(true)}
+             title="Instant Lock"
+             className="text-3xl font-black tracking-tighter text-[#1F2937] drop-shadow-[0_0_15px_rgba(109,40,217,0.4)] font-sans hover:scale-105 transition-transform cursor-pointer"
+          >
             Arispace
           </h1>
         </div>

@@ -5,15 +5,15 @@ import { toPng } from 'html-to-image';
 import { ResultModal } from './ResultModal';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
-  Sparkles, 
-  History, 
   ChevronDown, 
   Trash2, 
   Layers, 
   Zap, 
   ShieldCheck,
   Loader2,
-  Maximize
+  Maximize,
+  History,
+  Sparkles
 } from 'lucide-react';
 
 export const LayersPanel: React.FC = () => {
@@ -171,7 +171,7 @@ export const LayersPanel: React.FC = () => {
               <p className="text-[10px] font-bold uppercase tracking-widest">Sin elementos</p>
             </div>
           ) : (
-            sortedItems.map((item, index) => (
+            sortedItems.map((item) => (
               <motion.div 
                 layout
                 key={item.id} 

@@ -1,9 +1,14 @@
 import React, { useState } from 'react';
 import { WelcomeHeader } from './WelcomeHeader';
-import { UploadCloud, Info, AlertTriangle, ShieldCheck, Box, Plus, ChevronDown, FolderPlus, X, Tag } from 'lucide-react';
+import { UploadCloud, Info, AlertTriangle, Box, Plus, ChevronDown, FolderPlus, X, Tag } from 'lucide-react';
 import { useArispaceStore, SavedMaterial } from '../store/useArispaceStore';
 import { MaterialCard } from './Materials/MaterialCard';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useDropzone } from 'react-dropzone';
+import { extractColorsFromImage } from '../utils/colorExtractor';
+import { aiService } from '../services/aiService';
+import { UploadTextureModal } from './Materials/UploadTextureModal';
+import { TextureGenerator } from './Materials/TextureGenerator';
 
 export const MaterialsLabView: React.FC = () => {
   const { savedMaterials, materialFolders, addMaterialFolder } = useArispaceStore();
@@ -11,6 +16,7 @@ export const MaterialsLabView: React.FC = () => {
   
   // States for Modals and Folders
   const [showFolderModal, setShowFolderModal] = useState(false);
+  const [showUploadModal, setShowUploadModal] = useState(false);
   const [newFolderName, setNewFolderName] = useState('');
   const [openSections, setOpenSections] = useState<string[]>(['Suelos', 'Paredes']);
   
@@ -18,6 +24,39 @@ export const MaterialsLabView: React.FC = () => {
   const [showSaveModal, setShowSaveModal] = useState(false);
   const [materialToSave, setMaterialToSave] = useState<{imageUrl: string, lrv: string} | null>(null);
   const [saveMeta, setSaveMeta] = useState({ name: '', category: 'Suelos', folderId: '' });
+
+  // Physical Test States
+  const [physicalImg, setPhysicalImg] = useState<string>('https://images.unsplash.com/photo-1546484396-fb3fc6f95f98?auto=format&fit=crop&w=800&q=80');
+  const [dominantColor, setDominantColor] = useState<string>('#5C4033');
+  const [atomicComp, setAtomicComp] = useState<string>('FSC Certified Walnut (American), End-Grain, 5% Gloss Finish');
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+
+  const onDropPhysical = React.useCallback((acceptedFiles: File[]) => {
+    const file = acceptedFiles[0];
+    if (file) {
+      setIsAnalyzing(true);
+      const reader = new FileReader();
+      reader.onloadend = async () => {
+        const imgUrl = reader.result as string;
+        setPhysicalImg(imgUrl);
+        try {
+          const colors = await extractColorsFromImage(imgUrl, 1);
+          const hex = colors[0] || '#CCCCCC';
+          setDominantColor(hex);
+          
+          const desc = await aiService.askCreativeAssistant("Generate a highly technical 1-sentence architectural material specification (Atomic Composition) for this color profile: " + hex, "Material Lab Analysis");
+          setAtomicComp(desc.replace(/["']/g, ''));
+        } catch (e) {
+          console.error(e);
+        } finally {
+          setIsAnalyzing(false);
+        }
+      };
+      reader.readAsDataURL(file);
+    }
+  }, []);
+
+  const { getRootProps, getInputProps, isDragActive } = useDropzone({ onDrop: onDropPhysical, accept: { 'image/*': [] }, maxFiles: 1 });
 
   const toggleSection = (section: string) => {
     setOpenSections(prev => 
@@ -33,9 +72,8 @@ export const MaterialsLabView: React.FC = () => {
   };
 
   const handleOpenSaveModal = () => {
-    // Simulamos que capturamos la textura actual del simulador (Brushed Walnut por defecto en este mock)
     setMaterialToSave({
-      imageUrl: 'https://images.unsplash.com/photo-1546484396-fb3fc6f95f98?auto=format&fit=crop&w=800&q=80',
+      imageUrl: physicalImg,
       lrv: '18%'
     });
     setShowSaveModal(true);
@@ -124,13 +162,22 @@ export const MaterialsLabView: React.FC = () => {
               <p className="text-gray-400 font-bold uppercase tracking-[0.2em] text-xs mt-2 ml-1">Simulación física y banco de texturas pro</p>
             </div>
             
-            <button 
-              onClick={() => setShowFolderModal(true)}
-              className="flex items-center gap-3 bg-[#1F2937] hover:bg-black text-white px-8 py-4 rounded-2xl shadow-xl shadow-gray-200 font-bold text-sm uppercase tracking-widest transition-all hover:scale-105 active:scale-95 group"
-            >
-              <FolderPlus size={18} className="group-hover:rotate-12 transition-transform" />
-              Nueva Carpeta
-            </button>
+            <div className="flex gap-4">
+              <button 
+                onClick={() => setShowUploadModal(true)}
+                className="flex items-center gap-3 bg-emerald-500 hover:bg-emerald-600 text-white px-8 py-4 rounded-2xl shadow-xl shadow-emerald-200 font-bold text-sm uppercase tracking-widest transition-all hover:scale-105 active:scale-95 group"
+              >
+                <Plus size={18} className="group-hover:rotate-90 transition-transform" />
+                Añadir Textura
+              </button>
+              <button 
+                onClick={() => setShowFolderModal(true)}
+                className="flex items-center gap-3 bg-[#1F2937] hover:bg-black text-white px-8 py-4 rounded-2xl shadow-xl shadow-gray-200 font-bold text-sm uppercase tracking-widest transition-all hover:scale-105 active:scale-95 group"
+              >
+                <FolderPlus size={18} className="group-hover:rotate-12 transition-transform" />
+                Nueva Carpeta
+              </button>
+            </div>
           </div>
 
           {/* Environmental CCT Toggle */}
@@ -162,7 +209,7 @@ export const MaterialsLabView: React.FC = () => {
             <div 
               className="w-full h-full rounded-[2.5rem] relative overflow-hidden shadow-2xl group"
               style={{
-                backgroundImage: `url('https://images.unsplash.com/photo-1546484396-fb3fc6f95f98?auto=format&fit=crop&w=800&q=80')`,
+                backgroundImage: `url('${physicalImg}')`,
                 backgroundSize: 'cover',
                 backgroundPosition: 'center',
                 filter: cct === '2700K' ? 'sepia(30%) hue-rotate(-10deg) saturate(120%)' : cct === '6500K' ? 'hue-rotate(10deg) saturate(90%) brightness(110%)' : 'none',
@@ -182,9 +229,16 @@ export const MaterialsLabView: React.FC = () => {
           {/* Center Column: Dropzone & Contrast Result */}
           <div className="col-span-1 flex flex-col gap-8 h-[600px]">
             {/* Dropzone */}
-            <div className="flex-1 bg-white/40 backdrop-blur-md rounded-[3rem] p-10 shadow-luxury border-2 border-dashed border-gray-200 flex flex-col items-center justify-center gap-6 group cursor-pointer hover:bg-white/80 hover:border-emerald-500 transition-all">
+            <div {...getRootProps()} className={`flex-1 bg-white/40 backdrop-blur-md rounded-[3rem] p-10 shadow-luxury border-2 ${isDragActive ? 'border-emerald-500 bg-emerald-50/50' : 'border-dashed border-gray-200 hover:border-emerald-500'} flex flex-col items-center justify-center gap-6 group cursor-pointer hover:bg-white/80 transition-all relative overflow-hidden`}>
+              <input {...getInputProps()} />
+              {isAnalyzing && (
+                <div className="absolute inset-0 bg-white/80 backdrop-blur-sm z-10 flex flex-col items-center justify-center">
+                  <div className="w-8 h-8 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin mb-4"></div>
+                  <span className="text-[10px] font-black uppercase tracking-widest text-indigo-500">Secuenciando...</span>
+                </div>
+              )}
               <div className="w-24 h-24 rounded-full bg-white flex items-center justify-center group-hover:scale-110 transition-transform shadow-2xl border border-gray-50">
-                <UploadCloud size={40} className="text-gray-300 group-hover:text-emerald-500 transition-colors" />
+                <UploadCloud size={40} className={`transition-colors ${isDragActive ? 'text-emerald-500 scale-125' : 'text-gray-300 group-hover:text-emerald-500'}`} />
               </div>
               <div className="text-center">
                  <span className="text-sm font-black text-gray-800 uppercase tracking-widest block">Drop for Physical Test</span>
@@ -223,13 +277,13 @@ export const MaterialsLabView: React.FC = () => {
               <li className="flex flex-col gap-1 border-b border-gray-50 pb-6">
                 <span className="text-[10px] font-black uppercase tracking-[0.1em] text-gray-400">Dominant Chromaticity</span>
                 <div className="flex items-center gap-4 mt-3">
-                  <div className="w-12 h-12 rounded-2xl shadow-xl border-4 border-white bg-[#5C4033]"></div>
-                  <span className="text-lg font-mono font-black text-[#374151]">#5C4033</span>
+                  <div className="w-12 h-12 rounded-2xl shadow-xl border-4 border-white" style={{ backgroundColor: dominantColor }}></div>
+                  <span className="text-lg font-mono font-black text-[#374151]">{dominantColor}</span>
                 </div>
               </li>
               <li className="flex flex-col gap-1 border-b border-gray-50 pb-6">
                 <span className="text-[10px] font-black uppercase tracking-[0.1em] text-gray-400">Atomic Composition</span>
-                <span className="text-sm font-bold text-gray-700 mt-2 leading-relaxed">FSC Certified Walnut (American), End-Grain, 5% Gloss Finish</span>
+                <span className="text-sm font-bold text-gray-700 mt-2 leading-relaxed">{atomicComp}</span>
               </li>
             </ul>
 
@@ -241,6 +295,11 @@ export const MaterialsLabView: React.FC = () => {
               Guardar en Vault
             </button>
           </div>
+        </div>
+
+        {/* --- Motor Generativo AI --- */}
+        <div className="relative z-10 pt-4">
+           <TextureGenerator />
         </div>
 
         {/* --- Banco de Texturas Estructurado --- */}
@@ -330,6 +389,9 @@ export const MaterialsLabView: React.FC = () => {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Modal Upload Texture */}
+      {showUploadModal && <UploadTextureModal onClose={() => setShowUploadModal(false)} />}
 
       {/* Modal Guardado Inteligente */}
       <AnimatePresence>

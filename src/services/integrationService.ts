@@ -1,7 +1,7 @@
 import { aiService } from './aiService';
 
 export const integrationService = {
-  integrateWorkspace: async (base64Image: string, userPrompt: string, workspaceItems: any[], allConcepts: any[], hasBackground: boolean, isHD: boolean = true): Promise<string> => {
+  integrateWorkspace: async (_base64Image: string, userPrompt: string, workspaceItems: any[], allConcepts: any[], hasBackground: boolean, isHD: boolean = true): Promise<string> => {
     try {
       const hfApiKey = import.meta.env.VITE_HUGGINGFACE_API_KEY;
       if (!hfApiKey) {

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Sparkles, Image as ImageIcon, Loader2, ArrowRight, AlertCircle } from 'lucide-react';
+import { Image as ImageIcon, Loader2, ArrowRight, AlertCircle } from 'lucide-react';
 import { WelcomeHeader } from './WelcomeHeader';
 import { useArispaceStore } from '../store/useArispaceStore';
 import { aiService } from '../services/aiService';

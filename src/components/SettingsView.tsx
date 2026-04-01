@@ -1,9 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { WelcomeHeader } from './WelcomeHeader';
-import { ShieldCheck, Lock, Unlock, KeyRound, CheckCircle } from 'lucide-react';
+import { ShieldCheck, Lock, Unlock, KeyRound, CheckCircle, Moon, Sun, Timer } from 'lucide-react';
+import { useArispaceStore } from '../store/useArispaceStore';
 import { motion, AnimatePresence } from 'framer-motion';
 
 export const SettingsView: React.FC = () => {
+  const { isDarkMode, toggleDarkMode, autoLockTime, setAutoLockTime } = useArispaceStore();
+
   const [hasPin, setHasPin] = useState(false);
   const [modalMode, setModalMode] = useState<'create' | 'change' | null>(null);
   const [pinInput, setPinInput] = useState('');
@@ -124,13 +127,69 @@ export const SettingsView: React.FC = () => {
             
           </section>
 
-          {/* Other settings stubs just to fill the clean layout */}
-          <section className="bg-white/60 backdrop-blur-md rounded-[2.5rem] shadow-sm border border-white/50 p-10 flex flex-col gap-8 opacity-60 pointer-events-none">
+          {/* Workspace Preferences Section */}
+          <section className="bg-white/60 backdrop-blur-md rounded-[2.5rem] shadow-sm border border-white/50 p-10 flex flex-col gap-8">
             <div className="flex items-center gap-3 border-b border-black/5 pb-6">
               <h2 className="text-2xl font-bold font-sans tracking-tight text-[#1F2937]">Workspace Preferences</h2>
             </div>
-            <div className="p-6 bg-white/40 rounded-3xl border border-white/50 shadow-inner h-24 flex items-center justify-center">
-               <span className="text-sm font-bold text-[#9CA3AF] uppercase tracking-widest">General settings forthcoming</span>
+            
+            {/* Dark Mode Toggle */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 p-6 bg-white/40 rounded-3xl border border-white/50 shadow-inner group transition-all hover:bg-white/60">
+               <div className="flex items-center gap-4">
+                 <div className="w-12 h-12 rounded-xl bg-black/5 flex items-center justify-center text-[#1F2937] shadow-inner border border-white/30">
+                    {isDarkMode ? <Moon size={22} className="text-[#C084FC]" /> : <Sun size={22} className="text-[#6D28D9]" />}
+                 </div>
+                 <div className="flex flex-col">
+                   <h3 className="font-bold text-[#1F2937] text-lg">Dark Mode</h3>
+                   <span className="text-[13px] font-medium text-[#4B5563] max-w-sm">
+                     Reduce visual strain and immerse creatively with high contrast deep tones.
+                   </span>
+                 </div>
+               </div>
+               
+               <button 
+                  onClick={toggleDarkMode} 
+                  className={`w-14 h-8 rounded-full transition-colors flex items-center px-1 shadow-inner cursor-pointer ${isDarkMode ? 'bg-[#6D28D9]' : 'bg-gray-300'}`}
+               >
+                 <motion.div 
+                   layout 
+                   className={`w-6 h-6 rounded-full bg-white shadow-md ${isDarkMode ? 'ml-auto' : ''}`} 
+                 />
+               </button>
+            </div>
+
+            {/* Smart Suspend Timer */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 p-6 bg-white/40 rounded-3xl border border-white/50 shadow-inner group transition-all hover:bg-white/60">
+               <div className="flex items-center gap-4">
+                 <div className="w-12 h-12 rounded-xl bg-black/5 flex items-center justify-center text-[#1F2937] shadow-inner border border-white/30">
+                    <Timer size={22} className={autoLockTime > 0 ? "text-[#C084FC]" : "text-[#9CA3AF]"} />
+                 </div>
+                 <div className="flex flex-col">
+                   <h3 className="font-bold text-[#1F2937] text-lg">Smart Auto-Lock</h3>
+                   <span className="text-[13px] font-medium text-[#4B5563] max-w-sm">
+                     Suspend the workspace automatically to save memory and protect ideas.
+                   </span>
+                 </div>
+               </div>
+               
+               <div className="relative">
+                 <select 
+                   value={autoLockTime}
+                   onChange={(e) => setAutoLockTime(Number(e.target.value))}
+                   className="appearance-none bg-white/80 hover:bg-white text-[#1F2937] font-bold text-sm px-5 py-3 pr-10 rounded-xl border border-black/10 focus:outline-none focus:ring-2 focus:ring-[#6D28D9]/30 transition-shadow cursor-pointer shadow-sm"
+                 >
+                   <option value={0}>Disabled (Never)</option>
+                   <option value={5}>5 Minutes</option>
+                   <option value={10}>10 Minutes</option>
+                   <option value={15}>15 Minutes</option>
+                   <option value={20}>20 Minutes</option>
+                   <option value={25}>25 Minutes</option>
+                   <option value={30}>30 Minutes</option>
+                 </select>
+                 <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-gray-500">
+                    ▼
+                 </div>
+               </div>
             </div>
           </section>
 

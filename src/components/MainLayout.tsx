@@ -1,6 +1,5 @@
 import React, { ReactNode } from 'react';
 import { Sidebar } from './Sidebar';
-import { SaveIndicator } from './SaveIndicator';
 import { ParticlesBackground } from './ParticlesBackground';
 
 interface MainLayoutProps {

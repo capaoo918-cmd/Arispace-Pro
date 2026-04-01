@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { HelpCircle, MousePointer, Maximize2, Trash2, Droplet, Move } from 'lucide-react';
+import { HelpCircle, Maximize2, Trash2, Droplet, Move } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 export const ShortcutHint: React.FC = () => {
