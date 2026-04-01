@@ -129,3 +129,40 @@
 .animate-orb-2 { animation: orbMove2 34s infinite ease-in-out; }
 .animate-orb-3 { animation: orbMove3 40s infinite ease-in-out; }
 .animate-orb-4 { animation: orbMove4 22s infinite ease-in-out; }
+
+/* --- Arispace Premium Utilities --- */
+
+.btn-premium {
+  @apply relative overflow-hidden transition-all duration-300 active:scale-95 disabled:opacity-50 disabled:pointer-events-none;
+}
+
+.btn-premium::after {
+  content: '';
+  @apply absolute inset-0 bg-white/10 opacity-0 transition-opacity duration-300;
+}
+
+.btn-premium:hover::after {
+  @apply opacity-100;
+}
+
+.shadow-glow {
+  box-shadow: 0 0 20px rgba(16, 185, 129, 0.2);
+}
+
+.custom-scrollbar::-webkit-scrollbar {
+  width: 4px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  @apply bg-transparent;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  @apply bg-gray-200 rounded-full hover:bg-gray-300 transition-colors;
+}
+
+.custom-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: #E5E7EB transparent;
+}
+

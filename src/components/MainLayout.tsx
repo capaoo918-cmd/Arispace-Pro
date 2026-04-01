@@ -27,11 +27,6 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
       {/* Sidebar fixed to the left */}
       <Sidebar />
       
-      {/* Save Indicator floating top right */}
-      <div className="fixed top-6 right-8 z-50 pointer-events-none">
-        <SaveIndicator />
-      </div>
-      
       {/* Main Content Area */}
       <main className="flex-1 ml-[250px] p-8 w-full min-h-screen relative z-10 pointer-events-none">
         <div className="max-w-7xl mx-auto h-full pointer-events-auto">

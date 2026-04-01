@@ -1,8 +1,8 @@
 {
   "rewrites": [
     {
-      "source": "/api/generate/:prompt*",
-      "destination": "https://image.pollinations.ai/prompt/:prompt*"
+      "source": "/api/hf/(.*)",
+      "destination": "https://router.huggingface.co/hf-inference/$1"
     }
   ]
 }

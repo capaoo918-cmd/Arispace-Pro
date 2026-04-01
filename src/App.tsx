@@ -47,6 +47,16 @@ import { geminiService } from './services/geminiService';
 import { motion, AnimatePresence } from 'motion/react';
 import ReactMarkdown from 'react-markdown';
 
+// --- Main App / Global Components ---
+import { MainLayout } from './components/MainLayout';
+import { IcebreakerView as NewIcebreakerView } from './components/IcebreakerView';
+import { QuickCapturePanel } from './components/QuickCapturePanel';
+import { WorkspaceView } from './components/Workspace/WorkspaceView';
+import { MaterialsLabView as NewMaterialsLabView } from './components/MaterialsLabView';
+import { ReportsView as NewReportsView } from './components/ReportsView';
+import { SettingsView as NewSettingsView } from './components/SettingsView';
+import { PinLockScreen } from './components/PinLockScreen';
+
 // --- Components ---
 
 const TopAppBar = ({ currentView, setView }: { currentView: View, setView: (v: View) => void }) => (
@@ -1145,14 +1155,6 @@ const ChatBot = () => {
 };
 
 // --- Main App ---
-import { MainLayout } from './components/MainLayout';
-import { IcebreakerView as NewIcebreakerView } from './components/IcebreakerView';
-import { QuickCapturePanel } from './components/QuickCapturePanel';
-import { MoodboardView as NewMoodboardView } from './components/MoodboardView';
-import { MaterialsLabView as NewMaterialsLabView } from './components/MaterialsLabView';
-import { ReportsView as NewReportsView } from './components/ReportsView';
-import { SettingsView as NewSettingsView } from './components/SettingsView';
-import { PinLockScreen } from './components/PinLockScreen';
 
 export default function App() {
   const [view, setView] = useState('icebreaker');
@@ -1161,6 +1163,15 @@ export default function App() {
   useEffect(() => {
     // For deployment demo logic, forcibly set the PIN to '1507' to ensure the user is never locked out.
     localStorage.setItem('arispace_pin', '1507');
+
+    // LIMPIEZA FINAL: Resetear datos de prueba si es la primera carga de esta versión
+    const CLEAN_VERSION = 'v1.2_final';
+    if (localStorage.getItem('arispace_clean_marker') !== CLEAN_VERSION) {
+      localStorage.removeItem('arispace-storage');
+      localStorage.setItem('arispace_clean_marker', CLEAN_VERSION);
+      console.log("Arispace Cleanup: Datos de prueba eliminados. Sistema listo.");
+      // No recargamos aquí para evitar bucles, el store se inicializará vacío.
+    }
   }, []);
 
   useEffect(() => {
@@ -1187,7 +1198,7 @@ export default function App() {
           transition={{ duration: 0.8, ease: "easeOut" }}
         >
           <MainLayout>
-            {view === 'moodboard' ? <NewMoodboardView /> : view === 'materials' ? <NewMaterialsLabView /> : view === 'reports' ? <NewReportsView /> : view === 'settings' ? <NewSettingsView /> : <NewIcebreakerView />}
+            {view === 'moodboard' ? <WorkspaceView /> : view === 'materials' ? <NewMaterialsLabView /> : view === 'reports' ? <NewReportsView /> : view === 'settings' ? <NewSettingsView /> : <NewIcebreakerView />}
           </MainLayout>
           <QuickCapturePanel />
         </motion.div>

@@ -1,125 +1,241 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { WelcomeHeader } from './WelcomeHeader';
 import { Download, FileCheck, AlertTriangle, CheckCircle, Loader2 } from 'lucide-react';
-import { motion, AnimatePresence } from 'motion/react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { useArispaceStore } from '../store/useArispaceStore';
+import { MaterialPicker, MaterialInfo } from '../utils/MaterialPicker';
+
+interface ComputedMaterial extends MaterialInfo {
+  lrv: string;
+  compliant: boolean;
+  img: string;
+  originalName: string;
+}
 
 export const ReportsView: React.FC = () => {
+  const { workspaceItems, projectVersions } = useArispaceStore();
   const [exportState, setExportState] = useState<'idle' | 'exporting' | 'ready'>('idle');
+  const [materials, setMaterials] = useState<ComputedMaterial[]>([]);
+  const [isScanning, setIsScanning] = useState(true);
+  
+  // Costos Financieros
+  const [showCosts, setShowCosts] = useState(false);
+  const [costs, setCosts] = useState<Record<string, number>>({});
+
+  const handleCostChange = (index: number, val: string) => {
+    setCosts(prev => ({ ...prev, [index]: parseFloat(val) || 0 }));
+  };
+
+  const grandTotal = materials.reduce((acc, _, i) => acc + (costs[i] || 0), 0);
+
+  // Auto-scan items in workspace
+  useEffect(() => {
+    const scanMaterials = async () => {
+      setIsScanning(true);
+      const computed: ComputedMaterial[] = [];
+      const cache = new Set<string>();
+
+      for (const item of workspaceItems) {
+        if (cache.has(item.imageUrl)) continue;
+        cache.add(item.imageUrl);
+        
+        try {
+          // Extraemos usando el centro del mueble
+          const data = await MaterialPicker.analyzePixel(item.imageUrl, 0.5, 0.5);
+          
+          // LRV y compliance pseudo-smart basado en Hex logic
+          const r = parseInt(data.hex.substring(1, 3), 16);
+          const g = parseInt(data.hex.substring(3, 5), 16);
+          const b = parseInt(data.hex.substring(5, 7), 16);
+          const lrvValue = Math.round((0.2126 * r + 0.7152 * g + 0.0722 * b) / 255 * 100);
+          
+          computed.push({
+            ...data,
+            lrv: `${lrvValue}%`,
+            compliant: lrvValue > 30, // Basic ADA mockup rule
+            img: item.imageUrl,
+            originalName: `Asset #${item.id.substring(0,4)}`
+          });
+        } catch (error) {
+          console.error("No se pudo escanear", error);
+        }
+      }
+      
+      setMaterials(computed);
+      setIsScanning(false);
+    };
+
+    scanMaterials();
+  }, [workspaceItems]);
 
   const handleExport = () => {
     setExportState('exporting');
     setTimeout(() => {
       setExportState('ready');
-    }, 3500);
+    }, 2500);
   };
 
   const downloadPDF = () => {
     setExportState('idle');
-    // Mock download action for visual fidelity presentation
+    window.print(); // Natively prints using CSS rules Print!
   };
 
-  const materials = [
-    { name: "Brushed Walnut", hex: "#5C4033", lrv: "18%", compliant: false, img: "https://images.unsplash.com/photo-1546484396-fb3fc6f95f98?auto=format&fit=crop&w=200&q=80" },
-    { name: "Carrara Marble", hex: "#F2F2F2", lrv: "72%", compliant: true, img: "https://images.unsplash.com/photo-1600607688969-a5bfcd646154?auto=format&fit=crop&w=200&q=80" },
-    { name: "Oxidized Copper", hex: "#4A6B62", lrv: "24%", compliant: false, img: "https://images.unsplash.com/photo-1567360425618-1594206637d2?auto=format&fit=crop&w=200&q=80" },
-    { name: "Ethereal Linen", hex: "#E8E6E1", lrv: "65%", compliant: true, img: "https://images.unsplash.com/photo-1584282855140-5a9d82e2c077?auto=format&fit=crop&w=200&q=80" },
-  ];
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    show: {
+      opacity: 1,
+      transition: { staggerChildren: 0.15 }
+    }
+  };
+
+  const itemVariants = {
+    hidden: { opacity: 0, y: 20 },
+    show: { opacity: 1, y: 0, transition: { type: "spring" as const, stiffness: 100 } }
+  };
 
   return (
-    <div className="w-full h-full flex flex-col items-center overflow-y-auto hide-scrollbar pb-12 relative">
-      <div className="w-full flex-grow flex flex-col gap-10">
+    <div className="w-full h-full flex flex-col items-center overflow-y-auto hide-scrollbar pb-12 relative bg-white sm:p-4">
+      <div id="print-area" className="w-full flex-grow flex flex-col gap-10">
         
         {/* Header & Title */}
-        <div className="flex justify-between items-end">
+        <div className="flex justify-between items-end print:items-start">
           <div>
-            <WelcomeHeader />
-            <h1 className="text-5xl lg:text-6xl font-extrabold tracking-tight text-[#1F2937] mt-8 font-sans drop-shadow-sm">
-              Technical Materials Report:<br/><span className="text-[var(--color-primary)]">Project Alpha</span>
+            <div className="print:hidden"><WelcomeHeader /></div>
+            <h1 className="text-5xl lg:text-6xl font-extrabold tracking-tight text-[#1F2937] mt-8 font-sans drop-shadow-sm print:text-5xl print:text-black">
+              Technical Materials Report:<br/><span className="text-emerald-500 print:text-black">Project Alpha</span>
             </h1>
+            <p className="mt-4 text-sm font-bold uppercase tracking-widest text-gray-400 print:text-black">
+              Generado a partir de {workspaceItems.length} objetos físicos en el lienzo.
+            </p>
           </div>
           
           <button 
             onClick={handleExport}
-            className="flex items-center gap-2 bg-[#1F2937] hover:bg-[#111827] text-white px-8 py-4 rounded-2xl shadow-lg transition-all active:scale-95 group"
+            className="print:hidden flex items-center gap-2 bg-[#1F2937] hover:bg-black text-white px-8 py-4 rounded-2xl shadow-lg transition-all active:scale-95 group"
           >
             <span className="font-bold tracking-wide text-sm uppercase">Export PDF Report</span>
             <Download size={18} className="group-hover:translate-y-0.5 transition-transform" strokeWidth={2.5} />
           </button>
         </div>
 
-        <div className="flex flex-col xl:flex-row gap-8 w-full mt-4">
+        <div className="flex flex-col xl:flex-row gap-8 w-full mt-4 print:flex-col">
           
           {/* Left: Executive Summary */}
-          <div className="w-full xl:w-1/3 flex flex-col gap-6">
-            <div className="bg-white/60 backdrop-blur-md rounded-[2.5rem] p-8 shadow-sm border border-white/50 flex flex-col items-center justify-center text-center h-[300px]">
-              <span className="text-[10px] uppercase tracking-[0.2em] text-[#6B7280] font-bold mb-4">Overall Performance</span>
-              <div className="text-7xl font-light text-[var(--color-primary)] font-sans tracking-tighter mb-6 relative">
-                8.4<span className="text-3xl font-bold text-[#9CA3AF] absolute bottom-2 -right-12">/10</span>
+          <div className="w-full xl:w-1/3 flex flex-col gap-6 print:w-full print:flex-row">
+            <div className="bg-gray-50 print:border print:border-black rounded-[2.5rem] p-8 shadow-sm flex flex-col items-center justify-center text-center h-[300px] print:h-auto print:w-1/2">
+              <span className="text-[10px] uppercase tracking-[0.2em] text-[#6B7280] font-bold mb-4 print:text-black">Overall Performance</span>
+              <div className="text-7xl font-light text-emerald-500 font-sans tracking-tighter mb-6 relative print:text-black">
+                8.4<span className="text-3xl font-bold text-[#9CA3AF] absolute bottom-2 -right-12 print:text-black">/10</span>
               </div>
               
-              <div className="bg-emerald-500/10 border border-emerald-500/20 px-6 py-3 rounded-2xl flex items-center justify-center gap-3 w-full shadow-inner mt-4">
-                <CheckCircle size={24} className="text-emerald-500" />
+              <div className="bg-emerald-50 border border-emerald-100 px-6 py-3 rounded-2xl flex items-center justify-center gap-3 w-full shadow-inner mt-4 print:border-black print:bg-transparent">
+                <CheckCircle size={24} className="text-emerald-500 print:text-black" />
                 <div className="flex flex-col items-start leading-tight">
-                   <span className="text-emerald-700 font-extrabold tracking-wide uppercase text-sm">Pass</span>
-                   <span className="text-emerald-600/70 text-[10px] font-bold uppercase tracking-widest">ADA Compliance</span>
+                   <span className="text-emerald-700 font-extrabold tracking-wide uppercase text-sm print:text-black">Pass</span>
+                   <span className="text-emerald-600/70 text-[10px] font-bold uppercase tracking-widest print:text-black">ADA Compliance</span>
                 </div>
               </div>
             </div>
 
-            <div className="bg-[#1F2937] text-white rounded-[2.5rem] p-8 shadow-xl flex flex-col h-[260px] relative overflow-hidden">
-               <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-bl-[5rem]" />
-               <div className="absolute bottom-0 left-0 w-24 h-24 bg-[var(--color-accent)]/10 rounded-tr-[4rem]" />
-               <h3 className="text-xs font-bold uppercase tracking-[0.15em] mb-4 text-white/50 relative z-10">Architect's Note</h3>
-               <p className="text-sm leading-relaxed font-medium relative z-10 text-white/90">
-                 The material palette demonstrates exceptional cohesion. However, primary transit corridors relying on Oxidized Copper and Brushed Walnut require supplemental wayfinding lighting to meet the minimum 30 LRV delta across transitions.
+            <div className="bg-[#1F2937] print:bg-white print:border print:border-black text-white rounded-[2.5rem] p-8 shadow-xl flex flex-col h-[260px] relative overflow-hidden print:w-1/2 print:h-auto">
+               <h3 className="text-xs font-bold uppercase tracking-[0.15em] mb-4 text-white/50 relative z-10 print:text-black">Architect's Note</h3>
+               <p className="text-sm leading-relaxed font-medium relative z-10 text-white/90 print:text-black">
+                 The material palette demonstrates cohesion automatically derived from the Arispace Vision heuristics. Items marked with LRV less than 30 may require supplemental artificial lighting to meet interior standards.
                </p>
             </div>
           </div>
 
           {/* Right: Material Inventory List */}
-          <div className="w-full xl:w-2/3 bg-white/60 backdrop-blur-md rounded-[2.5rem] shadow-sm border border-white/50 p-8 flex flex-col">
-            <div className="flex items-center gap-3 border-b border-black/5 pb-6 mb-6">
-              <FileCheck size={20} className="text-[var(--color-primary)]" />
-              <h3 className="text-sm font-bold uppercase tracking-[0.2em] text-[#1F2937]">Material Inventory</h3>
+          <div className="w-full xl:w-2/3 bg-gray-50 print:bg-transparent rounded-[2.5rem] p-8 flex flex-col">
+            <div className="flex items-center justify-between border-b border-black/10 pb-6 mb-6">
+              <div className="flex items-center gap-3">
+                <FileCheck size={20} className="text-emerald-500 print:text-black" />
+                <h3 className="text-sm font-bold uppercase tracking-[0.2em] text-[#1F2937] print:text-black">Material Inventory (BOM)</h3>
+              </div>
+              
+              {/* Toggle de Costos (oculto en PDF final si está apagado) */}
+              <button 
+                onClick={() => setShowCosts(!showCosts)}
+                className="print:hidden text-[10px] font-bold uppercase px-3 py-1.5 rounded-full bg-white border border-gray-200 text-gray-500 hover:text-[#1F2937] transition-colors shadow-sm"
+              >
+                {showCosts ? 'Ocultar Presupuesto' : 'Añadir Precios'}
+              </button>
             </div>
 
-            <div className="flex flex-col gap-4">
-              {materials.map((mat, i) => (
-                <div key={i} className="flex items-center justify-between p-4 bg-white/40 border border-white/50 rounded-2xl hover:bg-white/80 transition-all shadow-inner group cursor-pointer">
-                  <div className="flex items-center gap-6">
-                    <div className="w-16 h-16 rounded-xl overflow-hidden shadow-sm border border-black/10 flex-shrink-0">
-                      <img src={mat.img} alt={mat.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
-                    </div>
-                    <div className="flex flex-col gap-1 w-48">
-                      <span className="text-sm font-extrabold text-[#1F2937] tracking-tight">{mat.name}</span>
-                      <div className="flex items-center gap-2 mt-0.5">
-                         <div className="w-3.5 h-3.5 rounded-full shadow-inner border border-black/5" style={{ backgroundColor: mat.hex }} />
-                         <span className="text-[10px] font-mono text-[#6B7280] font-bold tracking-widest">{mat.hex}</span>
+            {isScanning ? (
+              <div className="flex flex-col items-center justify-center h-48 text-gray-400 gap-4">
+                <Loader2 size={32} className="animate-spin" />
+                <span className="text-xs uppercase font-bold tracking-widest animate-pulse">Analizando Píxeles...</span>
+              </div>
+            ) : materials.length === 0 ? (
+              <div className="flex flex-col items-center justify-center h-48 text-gray-400">
+                <span className="text-sm font-bold uppercase tracking-widest">Lienzo Vacío, sin materiales.</span>
+              </div>
+            ) : (
+              <motion.div variants={containerVariants} initial="hidden" animate="show" className="flex flex-col gap-4">
+                {materials.map((mat, i) => (
+                  <motion.div variants={itemVariants} key={i} className="flex items-center justify-between p-4 bg-white border border-gray-100 print:border-black/20 rounded-2xl hover:bg-gray-50 transition-all shadow-sm group">
+                    <div className="flex items-center gap-6">
+                      <div className="w-16 h-16 rounded-xl overflow-hidden shadow-inner border border-black/5 flex-shrink-0">
+                        <img src={mat.img} alt={mat.material} className="w-full h-full object-cover" />
+                      </div>
+                      <div className="flex flex-col gap-1 w-56">
+                        <span className="text-sm font-extrabold text-[#1F2937] tracking-tight truncate">{mat.material}</span>
+                        <div className="flex items-center gap-2 mt-0.5">
+                           <div className="w-3.5 h-3.5 rounded-full shadow-inner border border-black/10" style={{ backgroundColor: mat.hex }} />
+                           <span className="text-[10px] font-mono text-[#6B7280] font-bold tracking-widest">{mat.hex}</span>
+                        </div>
                       </div>
                     </div>
-                  </div>
 
-                  <div className="flex flex-col items-center justify-center w-24 border-x border-black/5 px-4 h-12">
-                     <span className="text-2xl font-light text-[#1F2937] tracking-tighter">{mat.lrv}</span>
-                     <span className="text-[9px] font-bold text-[#9CA3AF] uppercase tracking-[0.2em]">LRV</span>
-                  </div>
+                    <div className="flex flex-col items-center justify-center w-24 border-l border-black/5 px-4 h-12">
+                       <span className="text-2xl font-light text-[#1F2937] tracking-tighter">{mat.lrv}</span>
+                       <span className="text-[9px] font-bold text-[#9CA3AF] uppercase tracking-[0.2em]">LRV</span>
+                    </div>
 
-                  <div className="w-56 flex justify-end">
-                    {mat.compliant ? (
-                      <span className="px-3.5 py-2 rounded-xl bg-emerald-500/10 text-emerald-600 text-[10px] font-bold uppercase tracking-wider flex items-center gap-2 border border-emerald-500/20 shadow-sm w-full justify-center">
-                        <CheckCircle size={14} strokeWidth={2.5} /> ADA Compliant
-                      </span>
-                    ) : (
-                      <span className="px-3.5 py-2 rounded-xl bg-red-500/10 text-red-600 text-[10px] font-bold uppercase tracking-wider flex items-center gap-2 border border-red-500/20 shadow-sm w-full justify-center">
-                        <AlertTriangle size={14} strokeWidth={2.5} /> Low Contrast Warning
-                      </span>
+                    {/* Editor de Costo Condicional */}
+                    {showCosts && (
+                      <div className="flex flex-col items-center justify-center w-32 border-l border-black/5 px-4 h-12">
+                         <div className="flex items-center gap-1">
+                           <span className="text-sm font-bold text-gray-400">$</span>
+                           <input 
+                              type="number"
+                              value={costs[i] || ''}
+                              onChange={(e) => handleCostChange(i, e.target.value)}
+                              placeholder="0.00"
+                              className="w-16 bg-transparent text-lg font-bold text-[#1F2937] tracking-tighter focus:outline-none focus:border-b border-emerald-500 text-center"
+                           />
+                         </div>
+                         <span className="text-[9px] font-bold text-[#9CA3AF] uppercase tracking-[0.2em]">Estimado / m²</span>
+                      </div>
                     )}
-                  </div>
-                </div>
-              ))}
-            </div>
+
+                    <div className="w-48 flex justify-end">
+                      {mat.compliant ? (
+                        <span className="px-3.5 py-2 rounded-xl bg-emerald-50 text-emerald-600 text-[10px] font-bold uppercase tracking-wider flex items-center gap-2 border border-emerald-100 shadow-sm w-full justify-center print:border-black print:text-black">
+                          <CheckCircle size={14} strokeWidth={2.5} /> Compliant
+                        </span>
+                      ) : (
+                        <span className="px-3.5 py-2 rounded-xl bg-red-50 text-red-600 text-[10px] font-bold uppercase tracking-wider flex items-center gap-2 border border-red-100 shadow-sm w-full justify-center print:border-black print:text-black">
+                          <AlertTriangle size={14} strokeWidth={2.5} /> Low Contrast
+                        </span>
+                      )}
+                    </div>
+                  </motion.div>
+                ))}
+                
+                {showCosts && (
+                  <motion.div variants={itemVariants} className="mt-4 flex items-center justify-end p-6 bg-[#1F2937] rounded-2xl text-white shadow-xl print:bg-white print:text-black print:border-t-2 print:border-black print:shadow-none print:rounded-none">
+                     <span className="uppercase text-xs tracking-widest font-bold opacity-60 mr-6">Presupuesto Estimado de Materiales</span>
+                     <span className="text-4xl font-light tracking-tighter">
+                       <span className="text-emerald-400 print:text-black text-2xl align-top mr-1">$</span>
+                       {grandTotal.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                     </span>
+                  </motion.div>
+                )}
+              </motion.div>
+            )}
           </div>
-          
         </div>
       </div>
 
@@ -130,7 +246,7 @@ export const ReportsView: React.FC = () => {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-white/60 backdrop-blur-xl"
+            className="fixed inset-0 z-[99999] flex flex-col items-center justify-center bg-white/60 backdrop-blur-xl print:hidden"
           >
             <motion.div 
               initial={{ scale: 0.9, y: 20 }}
@@ -141,12 +257,12 @@ export const ReportsView: React.FC = () => {
               {exportState === 'exporting' ? (
                 <>
                   <div className="relative flex items-center justify-center w-24 h-24 mb-10">
-                    <Loader2 size={56} className="text-[var(--color-primary)] animate-spin absolute" strokeWidth={2} />
+                    <Loader2 size={56} className="text-emerald-500 animate-spin absolute" strokeWidth={2} />
                     <div className="w-20 h-20 border-4 border-black/5 rounded-full" />
                   </div>
-                  <h2 className="text-2xl font-extrabold text-[#1F2937] mb-3 font-sans tracking-tight">Exporting Project Alpha...</h2>
-                  <p className="text-[11px] font-bold uppercase tracking-[0.25em] text-[var(--color-primary)] opacity-80 animate-pulse">
-                    Compiling Aesthetic Metrics
+                  <h2 className="text-2xl font-extrabold text-[#1F2937] mb-3 font-sans tracking-tight">Compilando Reporte...</h2>
+                  <p className="text-[11px] font-bold uppercase tracking-[0.25em] text-emerald-600 opacity-80 animate-pulse">
+                    Procesando Archivos PDF
                   </p>
                 </>
               ) : (
@@ -154,16 +270,16 @@ export const ReportsView: React.FC = () => {
                   <div className="w-24 h-24 bg-emerald-500/10 rounded-full flex items-center justify-center mb-8 border border-emerald-500/20 shadow-inner">
                     <FileCheck size={40} className="text-emerald-500" strokeWidth={2.5} />
                   </div>
-                  <h2 className="text-3xl font-extrabold text-[#1F2937] mb-2 font-sans tracking-tight">Report Ready</h2>
+                  <h2 className="text-3xl font-extrabold text-[#1F2937] mb-2 font-sans tracking-tight">Reporte Listo</h2>
                   <p className="text-xs font-bold uppercase tracking-[0.2em] text-[#6B7280] mb-10 bg-black/5 px-4 py-1.5 rounded-full">
-                    File Size: <span className="text-[#1F2937]">2.4 MB</span>
+                    Apertura NATIVA DEL NAVEGADOR
                   </p>
                   
                   <button 
                     onClick={downloadPDF}
-                    className="w-full flex items-center justify-center gap-2 bg-[var(--color-primary)] hover:brightness-110 text-white px-8 py-5 rounded-[1.25rem] shadow-lg shadow-[var(--color-primary)]/20 transition-all active:scale-95 font-bold tracking-widest text-xs uppercase"
+                    className="w-full flex items-center justify-center gap-2 bg-emerald-500 hover:bg-emerald-600 text-white px-8 py-5 rounded-[1.25rem] shadow-lg shadow-emerald-500/20 transition-all active:scale-95 font-bold tracking-widest text-xs uppercase"
                   >
-                    <span>Download PDF</span>
+                    <span>Imprimir / PDF Externo</span>
                     <Download size={16} strokeWidth={2.5} />
                   </button>
                 </>
@@ -172,7 +288,6 @@ export const ReportsView: React.FC = () => {
           </motion.div>
         )}
       </AnimatePresence>
-
     </div>
   );
 };
