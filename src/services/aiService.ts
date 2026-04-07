@@ -182,90 +182,71 @@ export const aiService = {
   askCreativeAssistant: async (message: string, context: string): Promise<string> => {
     const FALLBACK = "La arquitectura es un lienzo vivo.";
     try {
-      const hfApiKey = import.meta.env.VITE_HUGGINGFACE_API_KEY;
-      if (!hfApiKey) return FALLBACK;
+      const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
+      if (!apiKey) return FALLBACK;
 
-      const MODEL = "mistralai/Mistral-7B-Instruct-v0.3";
-
-      const prompt = `<s>[INST] Eres el Asistente Creativo de Arispace, un experto en diseño de interiores y arquitectura de alta gama. Responde brevemente (máximo 2 oraciones), en español de forma inspiradora y profesional. 
-Contexto del lienzo actual del usuario: ${context}
-Pregunta del usuario: ${message} [/INST]`;
+      const prompt = `Eres el Asistente Creativo de Arispace, un experto en diseño de interiores y arquitectura de alta gama. Responde brevemente (máximo 2 oraciones), en español de forma inspiradora y profesional. 
+Contexto actual: ${context}
+Usuario: ${message}`;
 
       const response = await fetchWithTimeout(
-        `https://api-inference.huggingface.co/models/${MODEL}`,
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
         {
           method: "POST",
-          headers: {
-            Authorization: `Bearer ${hfApiKey}`,
-            "Content-Type": "application/json",
-          },
+          headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            inputs: prompt,
-            parameters: { max_new_tokens: 100, return_full_text: false, temperature: 0.7 },
+            contents: [{ parts: [{ text: prompt }] }],
+            generationConfig: { temperature: 0.7, maxOutputTokens: 80 }
           }),
         },
         30000
       );
 
-      // BLINDAJE: Validar status antes de parsear JSON
       if (!response.ok) return FALLBACK;
-
       const result = await response.json();
-
-      // BLINDAJE: Validar estructura de respuesta
-      if (!Array.isArray(result) || !result[0]?.generated_text) return FALLBACK;
-
-      return result[0].generated_text.trim();
+      const text = result.candidates?.[0]?.content?.parts?.[0]?.text;
+      
+      return text ? text.trim() : FALLBACK;
     } catch (error) {
-      return "Mi enlace neural está oscilando, pero recuerda: arriésgate con las texturas.";
+      return "Mi enlace neural oscila, pero recuerda: arriésgate con las texturas.";
     }
   },
 
   generateExpertPrompt: async (idea: string): Promise<string> => {
     const FALLBACK = `${idea}, architectural concept, volumetric lighting, 35mm wide angle, high contrast, sharp edges, distinct borders, 8k.`;
     try {
-      const hfApiKey = import.meta.env.VITE_HUGGINGFACE_API_KEY;
-      if (!hfApiKey) throw new Error("Missing Hugging Face API key");
+      const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
+      if (!apiKey) return FALLBACK;
 
-      const MODEL = "mistralai/Mistral-7B-Instruct-v0.3";
-
-      const systemPrompt = `Eres el Ingeniero de Prompts Senior en Arquitectura de Arispace. Tu misión es transformar la idea básica del usuario en un prompt técnico MAESTRO.
-      El prompt resultante DEBE ser en inglés y contener SIEMPRE:
-      - Iluminación: Volumetric lighting, soft shadows, chiaroscuro.
-      - Óptica: 35mm wide angle lens, f/8, high resolution.
-      - Materiales: Hormigón visto, coralina, maderas preciosas, mármol.
-      - Refuerzo Visual: high contrast, sharp edges, distinct borders.
-      Responde ÚNICAMENTE con el prompt enriquecido en una sola pieza de texto.`;
-
-      const prompt = `<s>[INST] ${systemPrompt} \n Idea del usuario: "${idea}" [/INST]`;
+      const systemPrompt = `Eres el Ingeniero de Prompts Senior en Arquitectura de Arispace. Transforma la idea del usuario en un prompt técnico MAESTRO. El prompt DEBE ser en inglés y contener:
+- Volumetric lighting, soft shadows, chiaroscuro.
+- 35mm wide angle lens, f/8, high resolution.
+- high contrast, sharp edges, distinct borders.
+Responde ÚNICAMENTE con el prompt enriquecido. Idea del usuario: "${idea}"`;
 
       const response = await fetchWithTimeout(
-        `https://api-inference.huggingface.co/models/${MODEL}`,
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
         {
           method: "POST",
-          headers: {
-            Authorization: `Bearer ${hfApiKey}`,
-            "Content-Type": "application/json",
-          },
+          headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            inputs: prompt,
-            parameters: { max_new_tokens: 250, return_full_text: false, temperature: 0.1 },
+            contents: [{ parts: [{ text: systemPrompt }] }],
+            generationConfig: { temperature: 0.1, maxOutputTokens: 200 }
           }),
         },
         40000
       );
 
-      // BLINDAJE: Validar status y estructura antes de usar
       if (!response.ok) return FALLBACK;
-
       const result = await response.json();
-      if (!Array.isArray(result) || !result[0]?.generated_text) return FALLBACK;
+      const rawText = result.candidates?.[0]?.content?.parts?.[0]?.text;
+      
+      if (!rawText) return FALLBACK;
 
-      const rawText = result[0].generated_text;
       const safetySuffix = ", high contrast, sharp edges, distinct borders";
       const finalPrompt = rawText.includes("high contrast") ? rawText : rawText + safetySuffix;
 
-      return finalPrompt.trim().replace(/^"|"$/g, '');
+      return finalPrompt.trim().replace(/^"|"$/g, '').replace(/\n/g, ' ');
     } catch (error) {
       return FALLBACK;
     }
